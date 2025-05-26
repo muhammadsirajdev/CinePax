@@ -18,7 +18,12 @@ const showtimeSchema = new mongoose.Schema({
   endTime: {
      type: Date, 
      required: true 
-    }
+    },
+  price: {
+    type: Number,
+    required: true,
+    min: 0
+  }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Showtime', showtimeSchema);
