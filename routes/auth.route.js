@@ -17,7 +17,7 @@ module.exports = router;
 
 //router.get('/profile', verifyToken, getProfile);
 
-// Example: if you add admin-specific routes later
+//add admin-specific routes later
 // router.get('/admin-dashboard', verifyToken, isAdmin, adminDashboardController);
 
 
