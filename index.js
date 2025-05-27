@@ -43,12 +43,11 @@ app.get('/', (req, res) => {
   res.send('Backend server is running!');
 });
 
-// MongoDB connection
+
 connectDB(process.env.MONGO_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('Error connecting to MongoDB:', err));
 
-// Start server
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
