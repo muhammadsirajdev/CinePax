@@ -1,0 +1,15 @@
+[{
+  "_id": {
+    "$oid": "6834038a02c9f8686c0e4333"
+  },
+  "name": "Cineplex Mall",
+  "location": "Main Boulevard, Lahore",
+  "capacity": 200,
+  "createdAt": {
+    "$date": "2025-05-26T06:00:42.081Z"
+  },
+  "updatedAt": {
+    "$date": "2025-05-26T06:00:42.081Z"
+  },
+  "__v": 0
+}]

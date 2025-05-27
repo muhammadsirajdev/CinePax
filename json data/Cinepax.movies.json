@@ -1,0 +1,18 @@
+[{
+  "_id": {
+    "$oid": "6833fe4b5bcc1c77c99d8cbf"
+  },
+  "title": "Inception",
+  "duration": 148,
+  "genre": "Sci-Fi",
+  "releaseDate": {
+    "$date": "2010-07-16T00:00:00.000Z"
+  },
+  "createdAt": {
+    "$date": "2025-05-26T05:38:19.664Z"
+  },
+  "updatedAt": {
+    "$date": "2025-05-26T05:38:19.664Z"
+  },
+  "__v": 0
+}]
