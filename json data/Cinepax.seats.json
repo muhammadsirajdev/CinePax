@@ -1,0 +1,36 @@
+[{
+  "_id": {
+    "$oid": "68340a9f061c97c30e07828c"
+  },
+  "theater": {
+    "$oid": "6834038a02c9f8686c0e4333"
+  },
+  "seatNumber": "B1",
+  "row": "B",
+  "isAvailable": true,
+  "createdAt": {
+    "$date": "2025-05-26T06:30:55.858Z"
+  },
+  "updatedAt": {
+    "$date": "2025-05-26T06:30:55.858Z"
+  },
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "68340aa9061c97c30e078292"
+  },
+  "theater": {
+    "$oid": "6834038a02c9f8686c0e4333"
+  },
+  "seatNumber": "A1",
+  "row": "A",
+  "isAvailable": true,
+  "createdAt": {
+    "$date": "2025-05-26T06:31:05.513Z"
+  },
+  "updatedAt": {
+    "$date": "2025-05-26T06:31:05.513Z"
+  },
+  "__v": 0
+}]

@@ -1,0 +1,18 @@
+[{
+  "_id": {
+    "$oid": "68340671ac311640150f9f1b"
+  },
+  "theater": {
+    "$oid": "6834038a02c9f8686c0e4333"
+  },
+  "firstName": "Ahsan",
+  "lastName": "Ali",
+  "role": "Ticket Checker",
+  "createdAt": {
+    "$date": "2025-05-26T06:13:05.148Z"
+  },
+  "updatedAt": {
+    "$date": "2025-05-26T06:13:05.148Z"
+  },
+  "__v": 0
+}]
