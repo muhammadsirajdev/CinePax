@@ -6,7 +6,7 @@ interface JwtPayload {
   id: string;
   email: string;
   fullName?: string;
-  isAdmin?: boolean;
+  role?: 'customer' | 'admin' | 'staff';
 }
 
 declare global {
@@ -45,7 +45,7 @@ export const verifyToken = async (req: Request, res: Response, next: NextFunctio
 
 // Middleware to check if user is admin
 export const isAdmin = (req: Request, res: Response, next: NextFunction): void => {
-  if (!req.user?.isAdmin) {
+  if (req.user?.role !== 'admin') {
     res.status(403).json({ message: 'Access denied. Admin only.' });
     return;
   }

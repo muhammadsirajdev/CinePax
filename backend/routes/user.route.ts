@@ -22,7 +22,7 @@ router.get('/showtimes', filterShowtimes as RequestHandler);
 router.get('/showtimes/:showtimeId', getShowtimeDetails as unknown as RequestHandler);
 
 // Protected routes (require authentication)
-router.post('/book', verifyToken, bookTicket as RequestHandler);
+router.post('/book', verifyToken, bookTicket as unknown as RequestHandler);
 router.get('/tickets', verifyToken, getUserTickets as RequestHandler);
 router.get('/bookings', verifyToken, getBookingHistory as RequestHandler);
 router.delete('/bookings/:ticketId', verifyToken, cancelBooking as unknown as RequestHandler);

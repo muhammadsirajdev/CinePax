@@ -1,56 +1,41 @@
 import { Request, Response } from 'express';
 import Seat from '../model/seat.model';
-import Theater from '../model/theater.model';
+import Showtime from '../model/showtime.model';
 
 // Add new seat
 export const addSeat = async (req: Request, res: Response) => {
   try {
-    const { theater, seatNumber, row } = req.body;
+    const { showtimeId, seatNumber } = req.body;
 
-    if (!theater || !seatNumber || !row) {
+    if (!showtimeId || !seatNumber) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
-    // Check if theater exists and get current seat count
-    const theaterExists = await Theater.findById(theater);
-    if (!theaterExists) {
-      return res.status(404).json({ message: 'Theater not found' });
+    // Check if showtime exists
+    const showtime = await Showtime.findById(showtimeId);
+    if (!showtime) {
+      return res.status(404).json({ message: 'Showtime not found' });
     }
 
-    // Get current seat count for the theater
-    const currentSeatCount = await Seat.countDocuments({ theater: theater });
-    
-    // Check if adding new seat would exceed theater capacity
-    if (currentSeatCount >= theaterExists.capacity) {
-      return res.status(400).json({ 
-        message: 'Cannot add more seats. Theater has reached maximum capacity',
-        currentCapacity: currentSeatCount,
-        maxCapacity: theaterExists.capacity
-      });
-    }
-
-    // Check if seat already exists in the theater
+    // Check if seat already exists for this showtime
     const existingSeat = await Seat.findOne({
-      theater,
-      seatNumber,
-      row
+      showtimeId,
+      seatNumber
     });
 
     if (existingSeat) {
-      return res.status(400).json({ message: 'Seat already exists in this theater' });
+      return res.status(400).json({ message: 'Seat already exists for this showtime' });
     }
 
     const seat = await Seat.create({
-      theater,
+      showtimeId,
       seatNumber,
-      row,
-      isAvailable: true
+      status: 'available'
     });
 
     res.status(201).json({
       success: true,
-      data: seat,
-      remainingCapacity: theaterExists.capacity - (currentSeatCount + 1)
+      data: seat
     });
   } catch (err: any) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -60,31 +45,29 @@ export const addSeat = async (req: Request, res: Response) => {
 // Get all seats
 export const getAllSeats = async (req: Request, res: Response) => {
   try {
-    const seats = await Seat.find().populate('theater', 'name location capacity');
+    const seats = await Seat.find().populate('showtimeId', 'movieId theaterId startTime');
     
-    // Calculate remaining capacity for each theater
-    const theaterSeats: Record<string, any> = {};
-    seats.forEach(seat => {
-      const theater: any = seat.theater;
-      if (theater && typeof theater === 'object' && theater._id) {
-        const theaterId = theater._id.toString();
-        if (!theaterSeats[theaterId]) {
-          theaterSeats[theaterId] = {
-            theater: theater,
-            totalSeats: 0,
-            remainingCapacity: theater.capacity
-          };
-        }
-        theaterSeats[theaterId].totalSeats++;
-        theaterSeats[theaterId].remainingCapacity--;
-      }
-    });
-
     res.status(200).json({
       success: true,
       count: seats.length,
-      data: seats,
-      theaterCapacity: Object.values(theaterSeats)
+      data: seats
+    });
+  } catch (err: any) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Get seats by showtime
+export const getSeatsByShowtime = async (req: Request, res: Response) => {
+  try {
+    const { showtimeId } = req.params;
+    
+    const seats = await Seat.find({ showtimeId });
+    
+    res.status(200).json({
+      success: true,
+      count: seats.length,
+      data: seats
     });
   } catch (err: any) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -101,21 +84,12 @@ export const deleteSeat = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Seat not found' });
     }
 
-    // Get theater details before deleting seat
-    const theater = await Theater.findById(seat.theater);
-    const currentSeatCount = await Seat.countDocuments({ theater: seat.theater });
-
     // Delete the seat
     await Seat.findByIdAndDelete(id);
 
-    if (!theater) {
-      return res.status(404).json({ message: 'Theater not found' });
-    }
-
     res.status(200).json({
       success: true,
-      message: 'Seat deleted successfully',
-      remainingCapacity: theater.capacity - (currentSeatCount - 1)
+      message: 'Seat deleted successfully'
     });
   } catch (err: any) {
     res.status(500).json({ message: 'Server error', error: err.message });

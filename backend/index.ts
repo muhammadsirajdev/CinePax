@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
-import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import cors from 'cors';
 
 import connectDB from './connect';
 
@@ -14,13 +14,22 @@ import seatRoutes from './routes/seat.route';
 import showtimeRoutes from './routes/showtime.route';
 import ticketRoutes from './routes/ticket.route';
 import paymentRoutes from './routes/payment.route';
+import userRoutes from './routes/user.route';
+import adminRoutes from './routes/admin.route';
 
 dotenv.config();
+
+// Connect to MongoDB
+connectDB(process.env.MONGO_URI || 'mongodb://localhost:27017/cinepax');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
+app.use(cors({
+  origin: "*", // Frontend URL
+  credentials: true
+}));
 app.use(express.json());
 
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -29,23 +38,27 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // Routes
-app.use('/', authRoutes);
-app.use('/user', customerRoutes);
-app.use('/movies', movieRoutes);
-app.use('/theaters', theaterRoutes);
-app.use('/staff', staffRoutes);
-app.use('/seats', seatRoutes);
-app.use('/showtimes', showtimeRoutes);
-app.use('/tickets', ticketRoutes);
-app.use('/payments', paymentRoutes);
+app.use('/api', authRoutes);
+app.use('/api/customer', customerRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/movies', movieRoutes);
+app.use('/api/theaters', theaterRoutes);
+app.use('/api/staff', staffRoutes);
+app.use('/api/seats', seatRoutes);
+app.use('/api/showtimes', showtimeRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Backend server is running!');
 });
 
-connectDB(process.env.MONGO_URI || '')
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => console.error('Error connecting to MongoDB:', err));
+// Error handling middleware
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

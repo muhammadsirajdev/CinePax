@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import Customer from '../model/customer.model';
-import Admin from '../model/admin.model';
+import Customer, { ICustomer } from '../model/customer.model';
+import Admin, { IAdmin } from '../model/admin.model';
 import Blacklist from '../model/blacklist.model';
 
 interface SignupRequest {
@@ -61,7 +61,7 @@ export const loginUser = async (req: Request<{}, {}, LoginRequest>, res: Respons
         {
           id: admin._id,
           email: admin.email,
-          isAdmin: true
+          role: 'admin'
         },
         process.env.JWT_SECRET || 'default_secret',
         { expiresIn: '1h' }
@@ -80,7 +80,8 @@ export const loginUser = async (req: Request<{}, {}, LoginRequest>, res: Respons
     const token = jwt.sign(
       {
         id: customer._id,
-        email: customer.email
+        email: customer.email,
+        role: 'customer'
       },
       process.env.JWT_SECRET || 'default_secret',
       { expiresIn: '1h' }
@@ -115,13 +116,59 @@ export const logoutUser = async (req: Request, res: Response) => {
   }
 };
 
-// Get current customer's profile (protected route)
+// Get current user's profile (protected route)
 export const getProfile = async (req: Request, res: Response) => {
   try {
+    // First try to find in customers
     const customer = await Customer.findById(req.user?.id).select('-password');
-    if (!customer) return res.status(404).json({ message: 'User not found' });
+    if (customer) {
+      return res.status(200).json(customer);
+    }
+    
+    // If not found in customers, try admins
+    const admin = await Admin.findById(req.user?.id).select('-password');
+    if (admin) {
+      return res.status(200).json(admin);
+    }
 
-    res.status(200).json(customer);
+    return res.status(404).json({ message: 'User not found' });
+  } catch (err: any) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+// Update current user's profile (protected route)
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const { fullName, email, phone } = req.body;
+    
+    // First try to find in customers
+    const customer = await Customer.findById(req.user?.id);
+    if (customer) {
+      if (fullName) customer.fullName = fullName;
+      if (email) customer.email = email;
+      if (phone) customer.phone = phone;
+      await customer.save();
+
+      const customerObj = customer.toObject();
+      const { password, ...customerResponse } = customerObj;
+      return res.status(200).json(customerResponse);
+    }
+    
+    // If not found in customers, try admins
+    const admin = await Admin.findById(req.user?.id);
+    if (admin) {
+      if (fullName) admin.fullName = fullName;
+      if (email) admin.email = email;
+      if (phone) admin.phone = phone;
+      await admin.save();
+
+      const adminObj = admin.toObject();
+      const { password, ...adminResponse } = adminObj;
+      return res.status(200).json(adminResponse);
+    }
+
+    return res.status(404).json({ message: 'User not found' });
   } catch (err: any) {
     res.status(500).json({ message: 'Server error', error: err.message });
   }

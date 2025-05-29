@@ -4,8 +4,8 @@ import Movie from '../model/movie.model';
 import Theater from '../model/theater.model';
 
 interface ShowtimeRequest {
-  movie: string;
-  theater: string;
+  movieId: string;
+  theaterId: string;
   startTime: string;
   endTime: string;
   price: number;
@@ -14,9 +14,9 @@ interface ShowtimeRequest {
 // Add new showtime
 export const addShowtime = async (req: Request<{}, {}, ShowtimeRequest>, res: Response) => {
   try {
-    const { movie, theater, startTime, endTime, price } = req.body;
+    const { movieId, theaterId, startTime, endTime, price } = req.body;
 
-    if (!movie || !theater || !startTime || !endTime || !price) {
+    if (!movieId || !theaterId || !startTime || !endTime || !price) {
       return res.status(400).json({ message: 'All fields are required' });
     }
 
@@ -26,13 +26,13 @@ export const addShowtime = async (req: Request<{}, {}, ShowtimeRequest>, res: Re
     }
 
     // Check if movie exists
-    const movieExists = await Movie.findById(movie);
+    const movieExists = await Movie.findById(movieId);
     if (!movieExists) {
       return res.status(404).json({ message: 'Movie not found' });
     }
 
     // Check if theater exists
-    const theaterExists = await Theater.findById(theater);
+    const theaterExists = await Theater.findById(theaterId);
     if (!theaterExists) {
       return res.status(404).json({ message: 'Theater not found' });
     }
@@ -48,7 +48,7 @@ export const addShowtime = async (req: Request<{}, {}, ShowtimeRequest>, res: Re
 
     // Check for overlapping showtimes in the same theater
     const overlappingShowtime = await Showtime.findOne({
-      theater,
+      theaterId,
       $or: [
         {
           startTime: { $lt: endDateTime },
@@ -65,11 +65,12 @@ export const addShowtime = async (req: Request<{}, {}, ShowtimeRequest>, res: Re
     }
 
     const showtime = await Showtime.create({
-      movie,
-      theater,
+      movieId,
+      theaterId,
       startTime: startDateTime,
       endTime: endDateTime,
-      price
+      price,
+      availableSeats: theaterExists.capacity // Set initial available seats to theater capacity
     });
 
     res.status(201).json({
@@ -85,8 +86,8 @@ export const addShowtime = async (req: Request<{}, {}, ShowtimeRequest>, res: Re
 export const getAllShowtimes = async (req: Request, res: Response) => {
   try {
     const showtimes = await Showtime.find()
-      .populate('movie', 'title duration genre')
-      .populate('theater', 'name location');
+      .populate('movieId', 'title duration genre')
+      .populate('theaterId', 'name location');
     
     // Format the response to include pricing information
     const formattedShowtimes = showtimes.map(showtime => ({

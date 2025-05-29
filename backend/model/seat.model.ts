@@ -1,33 +1,141 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
-import { ITheater } from './theater.model';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ISeat extends Document {
-  theater: Types.ObjectId | ITheater;
+  showtimeId: mongoose.Types.ObjectId;
   seatNumber: string;
   row: string;
-  isAvailable: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+  status: 'AVAILABLE' | 'BOOKED' | 'RESERVED';
+  version: number;
+  lockExpiresAt?: Date;
+  lockedBy?: mongoose.Types.ObjectId;
+}
+
+interface ISeatModel extends Model<ISeat> {
+  acquireLock(showtimeId: mongoose.Types.ObjectId, seatNumber: string, row: string, userId: mongoose.Types.ObjectId, lockDuration?: number): Promise<ISeat | null>;
+  releaseLock(showtimeId: mongoose.Types.ObjectId, seatNumber: string, row: string, userId: mongoose.Types.ObjectId): Promise<ISeat | null>;
+  updateWithVersion(id: mongoose.Types.ObjectId, update: any, version: number): Promise<ISeat | null>;
 }
 
 const seatSchema = new Schema<ISeat>({
-  theater: {
+  showtimeId: {
     type: Schema.Types.ObjectId,
-    ref: 'Theater', 
-    required: true 
+    ref: 'Showtime',
+    required: true
   },
-  seatNumber: { 
-    type: String, 
-    required: true 
+  seatNumber: {
+    type: String,
+    required: true
   },
-  row: { 
-    type: String, 
-    required: true 
+  row: {
+    type: String,
+    required: true
   },
-  isAvailable: { 
-    type: Boolean, 
-    default: true
+  status: {
+    type: String,
+    enum: ['AVAILABLE', 'BOOKED', 'RESERVED'],
+    default: 'AVAILABLE'
+  },
+  version: {
+    type: Number,
+    default: 0
+  },
+  lockExpiresAt: {
+    type: Date
+  },
+  lockedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'Customer'
   }
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
-export default mongoose.model<ISeat>('Seat', seatSchema); 
+// Add compound index for showtime and seat
+seatSchema.index({ showtimeId: 1, seatNumber: 1, row: 1 }, { unique: true });
+
+// Add versioning middleware for optimistic locking
+seatSchema.pre('save', function(next) {
+  this.version += 1;
+  next();
+});
+
+// Static method for pessimistic locking
+seatSchema.statics.acquireLock = async function(
+  showtimeId: mongoose.Types.ObjectId,
+  seatNumber: string,
+  row: string,
+  userId: mongoose.Types.ObjectId,
+  lockDuration: number = 15 * 60 * 1000 // 15 minutes default
+) {
+  const now = new Date();
+  const lockExpiresAt = new Date(now.getTime() + lockDuration);
+
+  // Try to acquire lock
+  const seat = await this.findOneAndUpdate(
+    {
+      showtimeId,
+      seatNumber,
+      row,
+      $or: [
+        { lockExpiresAt: { $lt: now } },
+        { lockExpiresAt: { $exists: false } }
+      ]
+    },
+    {
+      $set: {
+        lockExpiresAt,
+        lockedBy: userId
+      }
+    },
+    { new: true }
+  );
+
+  return seat;
+};
+
+// Static method for releasing lock
+seatSchema.statics.releaseLock = async function(
+  showtimeId: mongoose.Types.ObjectId,
+  seatNumber: string,
+  row: string,
+  userId: mongoose.Types.ObjectId
+) {
+  return this.findOneAndUpdate(
+    {
+      showtimeId,
+      seatNumber,
+      row,
+      lockedBy: userId
+    },
+    {
+      $unset: {
+        lockExpiresAt: 1,
+        lockedBy: 1
+      }
+    },
+    { new: true }
+  );
+};
+
+// Static method for optimistic locking
+seatSchema.statics.updateWithVersion = async function(
+  id: mongoose.Types.ObjectId,
+  update: any,
+  version: number
+) {
+  return this.findOneAndUpdate(
+    {
+      _id: id,
+      version: version
+    },
+    {
+      $set: update,
+      $inc: { version: 1 }
+    },
+    { new: true }
+  );
+};
+
+const Seat = mongoose.model<ISeat, ISeatModel>('Seat', seatSchema);
+
+export default Seat; 

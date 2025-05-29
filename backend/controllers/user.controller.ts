@@ -3,21 +3,48 @@ import Movie, { IMovie } from '../model/movie.model';
 import Showtime, { IShowtime } from '../model/showtime.model';
 import Theater, { ITheater } from '../model/theater.model';
 import Ticket, { ITicket } from '../model/ticket.model';
+import Booking, { IBooking } from '../model/booking.model';
 import Payment from '../model/payment.model';
 import { Document, Types } from 'mongoose';
+import Seat from '../model/seat.model';
+import mongoose from 'mongoose';
 
-interface PopulatedMovie extends IMovie {
+interface PopulatedMovie {
   _id: Types.ObjectId;
+  title: string;
+  description: string;
+  duration: string;
+  genre: string;
+  releaseDate: Date;
+  posterUrl: string;
 }
 
-interface PopulatedTheater extends ITheater {
+interface PopulatedTheater {
   _id: Types.ObjectId;
+  name: string;
+  location: string;
+  capacity: number;
 }
 
-interface PopulatedShowtime extends IShowtime {
+interface PopulatedShowtime {
   _id: Types.ObjectId;
-  movie: PopulatedMovie;
-  theater: PopulatedTheater;
+  movieId: PopulatedMovie;
+  theaterId: PopulatedTheater;
+  startTime: Date;
+  endTime: Date;
+  price: number;
+}
+
+interface PopulatedTicket {
+  _id: Types.ObjectId;
+  showtime: PopulatedShowtime;
+  seat: {
+    seatNumber: string;
+    row: string;
+  };
+  price: number;
+  status: string;
+  purchaseDate: Date;
 }
 
 interface BookingRequest {
@@ -39,21 +66,21 @@ export const getAllMoviesWithShowtimes = async (req: Request, res: Response): Pr
   try {
     const movies = await Movie.find().lean();
     const showtimes = await Showtime.find()
-      .populate<{ movie: PopulatedMovie }>('movie', 'title description duration genre releaseDate posterUrl')
-      .populate<{ theater: PopulatedTheater }>('theater', 'name location capacity')
+      .populate<{ movieId: PopulatedMovie }>('movieId', 'title description duration genre releaseDate posterUrl')
+      .populate<{ theaterId: PopulatedTheater }>('theaterId', 'name location capacity')
       .lean();
 
     // Group showtimes by movie
     const moviesWithShowtimes = movies.map(movie => {
       const movieShowtimes = showtimes.filter(showtime => 
-        showtime.movie._id.toString() === movie._id.toString()
+        showtime.movieId._id.toString() === movie._id.toString()
       );
 
       return {
         ...movie,
         showtimes: movieShowtimes.map(showtime => ({
           id: showtime._id,
-          theater: showtime.theater,
+          theater: showtime.theaterId,
           startTime: showtime.startTime,
           endTime: showtime.endTime,
           price: showtime.price
@@ -82,19 +109,19 @@ export const getMovieDetails = async (req: Request<{ movieId: string }>, res: Re
       return;
     }
 
-    const showtimes = await Showtime.find({ movie: movieId })
-      .populate<{ theater: PopulatedTheater }>('theater', 'name location capacity')
+    const showtimes = await Showtime.find({ movieId })
+      .populate<{ theaterId: PopulatedTheater }>('theaterId', 'name location capacity')
       .lean();
 
     // Get seat availability for each showtime
     const showtimesWithAvailability = await Promise.all(showtimes.map(async (showtime) => {
       const bookedTickets = await Ticket.find({ showtime: showtime._id });
       const bookedSeats = bookedTickets.map(ticket => ticket.seat);
-      const availableSeats = showtime.theater.capacity - bookedSeats.length;
+      const availableSeats = showtime.theaterId.capacity - bookedSeats.length;
 
       return {
         id: showtime._id,
-        theater: showtime.theater,
+        theater: showtime.theaterId,
         startTime: showtime.startTime,
         endTime: showtime.endTime,
         price: showtime.price,
@@ -121,8 +148,8 @@ export const getShowtimeDetails = async (req: Request<{ showtimeId: string }>, r
     const { showtimeId } = req.params;
 
     const showtime = await Showtime.findById(showtimeId)
-      .populate<{ movie: PopulatedMovie }>('movie', 'title description duration genre releaseDate posterUrl')
-      .populate<{ theater: PopulatedTheater }>('theater', 'name location capacity')
+      .populate<{ movieId: PopulatedMovie }>('movieId', 'title description duration genre releaseDate posterUrl')
+      .populate<{ theaterId: PopulatedTheater }>('theaterId', 'name location capacity')
       .lean();
 
     if (!showtime) {
@@ -132,7 +159,7 @@ export const getShowtimeDetails = async (req: Request<{ showtimeId: string }>, r
 
     const bookedTickets = await Ticket.find({ showtime: showtimeId });
     const bookedSeats = bookedTickets.map(ticket => ticket.seat);
-    const availableSeats = showtime.theater.capacity - bookedSeats.length;
+    const availableSeats = showtime.theaterId.capacity - bookedSeats.length;
 
     res.status(200).json({
       success: true,
@@ -141,7 +168,7 @@ export const getShowtimeDetails = async (req: Request<{ showtimeId: string }>, r
         availableSeats,
         bookedSeats: bookedSeats.length,
         seatAvailability: {
-          total: showtime.theater.capacity,
+          total: showtime.theaterId.capacity,
           available: availableSeats,
           booked: bookedSeats.length
         }
@@ -153,62 +180,159 @@ export const getShowtimeDetails = async (req: Request<{ showtimeId: string }>, r
 };
 
 // Book a ticket
-export const bookTicket = async (req: Request<{}, {}, BookingRequest>, res: Response): Promise<void> => {
+export const bookTicket = async (req: Request, res: Response) => {
   try {
     const { showtimeId, seatNumber, row } = req.body;
     const customerId = req.user?.id;
 
     if (!customerId) {
-      res.status(401).json({ message: 'User not authenticated' });
-      return;
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
-    // Check if showtime exists
-    const showtime = await Showtime.findById(showtimeId)
-      .populate<{ theater: PopulatedTheater }>('theater', 'capacity')
-      .lean();
-    
+    // Get showtime
+    const showtime = await Showtime.findById(showtimeId);
     if (!showtime) {
-      res.status(404).json({ message: 'Showtime not found' });
-      return;
+      return res.status(404).json({ message: "Showtime not found" });
     }
 
-    // Check if seat is already booked
-    const existingTicket = await Ticket.findOne({
-      showtime: showtimeId,
-      seat: { seatNumber, row }
-    });
+    // Try to acquire pessimistic lock on the seat
+    // const lockedSeat = await Seat.acquireLock(
+    //   new mongoose.Types.ObjectId(showtimeId),
+    //   seatNumber,
+    //   row,
+    //   new mongoose.Types.ObjectId(customerId)
+    // );
 
-    if (existingTicket) {
-      res.status(400).json({ message: 'Seat is already booked' });
-      return;
-    }
+    // if (!lockedSeat) {
+    //   return res.status(409).json({ message: "Seat is currently being booked by another user" });
+    // }
 
-    // Create ticket
-    const ticket = await Ticket.create({
-      showtime: showtimeId,
-      customer: customerId,
-      seat: { seatNumber, row },
-      price: showtime.price
-    });
+    try {
+      // Check if seat is already booked
+      const existingTicket = await Ticket.findOne({
+        showtime: showtimeId,
+        'seat.seatNumber': seatNumber,
+        'seat.row': row,
+        status: { $ne: 'CANCELLED' }
+      });
 
-    // Create payment (hypothetical for now)
-    const payment = await Payment.create({
-      ticket: ticket._id,
-      amount: showtime.price,
-      paymentMethod: 'ONLINE',
-      paymentStatus: 'COMPLETED'
-    });
-
-    res.status(201).json({
-      success: true,
-      data: {
-        ticket,
-        payment
+      if (existingTicket) {
+        return res.status(400).json({ message: "Seat is already booked" });
       }
-    });
-  } catch (err: any) {
-    res.status(500).json({ message: 'Server error', error: err.message });
+
+      // Create seat document
+      const seat = await Seat.create([{
+        showtimeId,
+        seatNumber,
+        row,
+        status: 'BOOKED',
+        version: 0
+      }]);
+
+      // Create ticket
+      const ticket = await Ticket.create([{
+        showtime: showtimeId,
+        customer: customerId,
+        seat: seat[0]._id,
+        price: showtime.price,
+        status: 'confirmed'
+      }]);
+
+      if (!ticket || !ticket[0]) {
+        throw new Error('Failed to create ticket');
+      }
+
+      // Create payment
+      const payment = await Payment.create([{
+        ticket: ticket[0]._id,
+        amount: showtime.price,
+        paymentMethod: 'ONLINE',
+        paymentStatus: 'COMPLETED'
+      }]);
+
+      if (!payment || !payment[0]) {
+        throw new Error('Failed to create payment');
+      }
+
+      // Create booking record
+      const booking = await Booking.create([{
+        userId: customerId,
+        showtimeId,
+        seats: [`${row}${seatNumber}`],
+        totalAmount: showtime.price,
+        status: 'confirmed',
+        paymentStatus: 'paid',
+        ticket: ticket[0]._id,
+        payment: payment[0]._id
+      }]);
+
+      if (!booking || !booking[0]) {
+        throw new Error('Failed to create booking');
+      }
+
+      // Update showtime's available seats
+      showtime.availableSeats -= 1;
+      await showtime.save();
+
+      // Release the pessimistic lock
+      // await Seat.releaseLock(
+      //   new mongoose.Types.ObjectId(showtimeId),
+      //   seatNumber,
+      //   row,
+      //   new mongoose.Types.ObjectId(customerId)
+      // );
+
+      // Return success response
+      return res.status(201).json({
+        success: true,
+        message: "Ticket booked successfully",
+        data: {
+          ticket: {
+            _id: ticket[0]._id,
+            showtime: showtimeId,
+            customer: customerId,
+            seat: {
+              seatNumber,
+              row
+            },
+            price: showtime.price,
+            status: 'confirmed',
+            purchaseDate: new Date()
+          },
+          payment: {
+            _id: payment[0]._id,
+            ticket: ticket[0]._id,
+            amount: showtime.price,
+            paymentMethod: 'ONLINE',
+            paymentStatus: 'COMPLETED',
+            paymentDate: new Date()
+          },
+          booking: {
+            _id: booking[0]._id,
+            userId: customerId,
+            showtimeId,
+            seats: [`${row}${seatNumber}`],
+            totalAmount: showtime.price,
+            status: 'confirmed',
+            paymentStatus: 'paid'
+          }
+        }
+      });
+
+    } catch (error) {
+      // Release the pessimistic lock in case of error
+      // await Seat.releaseLock(
+      //   new mongoose.Types.ObjectId(showtimeId),
+      //   seatNumber,
+      //   row,
+      //   new mongoose.Types.ObjectId(customerId)
+      // );
+      throw error;
+    }
+
+  } catch (error: any) {
+    console.error("Booking error:", error);
+    return res.status(500).json({ message: error.message || "Error booking ticket" });
   }
 };
 
@@ -222,21 +346,33 @@ export const getUserTickets = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const tickets = await Ticket.find({ customer: customerId })
-      .populate<{ showtime: PopulatedShowtime }>({
+    const tickets = (await Ticket.find({ customer: customerId })
+      .populate({
         path: 'showtime',
         populate: [
-          { path: 'movie', select: 'title duration genre posterUrl' },
-          { path: 'theater', select: 'name location' }
+          { path: 'movieId', select: 'title duration genre posterUrl' },
+          { path: 'theaterId', select: 'name location' }
         ]
       })
       .populate('seat', 'seatNumber row')
-      .lean();
+      .lean()) as unknown as PopulatedTicket[];
 
     res.status(200).json({
       success: true,
       count: tickets.length,
-      data: tickets
+      data: tickets.map(ticket => ({
+        ticketId: ticket._id,
+        movie: ticket.showtime.movieId,
+        theater: ticket.showtime.theaterId,
+        showtime: {
+          startTime: ticket.showtime.startTime,
+          endTime: ticket.showtime.endTime
+        },
+        seat: ticket.seat,
+        price: ticket.price,
+        status: ticket.status,
+        bookingDate: ticket.purchaseDate
+      }))
     });
   } catch (err: any) {
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -291,8 +427,8 @@ export const filterShowtimes = async (req: Request<{}, {}, {}, SearchQuery>, res
     }
 
     const showtimes = await Showtime.find(query)
-      .populate<{ movie: PopulatedMovie }>('movie', 'title duration genre posterUrl')
-      .populate<{ theater: PopulatedTheater }>('theater', 'name location')
+      .populate<{ movieId: PopulatedMovie }>('movieId', 'title duration genre posterUrl')
+      .populate<{ theaterId: PopulatedTheater }>('theaterId', 'name location')
       .lean();
 
     res.status(200).json({
@@ -309,36 +445,76 @@ export const filterShowtimes = async (req: Request<{}, {}, {}, SearchQuery>, res
 export const getBookingHistory = async (req: Request, res: Response): Promise<void> => {
   try {
     const customerId = req.user?.id;
+    console.log("Customer ID from token:", customerId);
     if (!customerId) {
       res.status(401).json({ message: 'User not authenticated' });
       return;
     }
 
-    const tickets = await Ticket.find({ customer: customerId })
-      .populate<{ showtime: PopulatedShowtime }>({
-        path: 'showtime',
+    const bookings = await Booking.find({ userId: new Types.ObjectId(customerId) })
+      .populate<{ showtimeId: PopulatedShowtime }>({
+        path: 'showtimeId',
         populate: [
-          { path: 'movie', select: 'title duration genre posterUrl' },
-          { path: 'theater', select: 'name location' }
+          { path: 'movieId', select: 'title duration genre posterUrl' },
+          { path: 'theaterId', select: 'name location' }
         ]
       })
-      .populate('seat', 'seatNumber row')
+      .populate('seats')
       .sort({ createdAt: -1 })
       .lean();
 
-    const bookingHistory = tickets.map(ticket => ({
-      ticketId: ticket._id,
-      movie: ticket.showtime.movie,
-      theater: ticket.showtime.theater,
-      showtime: {
-        startTime: ticket.showtime.startTime,
-        endTime: ticket.showtime.endTime
-      },
-      seat: ticket.seat,
-      price: ticket.price,
-      bookingDate: ticket.createdAt,
-      status: 'confirmed' // You can add more statuses like 'cancelled', 'refunded', etc.
-    }));
+    console.log("Found bookings:", bookings.length);
+
+    const bookingHistory = bookings.map(booking => {
+      // Provide default values for missing data
+      const defaultMovie = {
+        _id: new Types.ObjectId(),
+        title: 'Movie Information Unavailable',
+        duration: 'N/A',
+        genre: 'N/A',
+        posterUrl: '/placeholder-movie.jpg'
+      };
+
+      const defaultTheater = {
+        _id: new Types.ObjectId(),
+        name: 'Theater Information Unavailable',
+        location: 'N/A'
+      };
+
+      const defaultShowtime = {
+        startTime: booking.createdAt || new Date(),
+        endTime: new Date(booking.createdAt?.getTime() + 7200000) || new Date() // 2 hours after start
+      };
+
+      // Parse seat strings into row and seatNumber
+      const parsedSeats = booking.seats?.map(seatStr => {
+        const row = seatStr.charAt(0);
+        const seatNumber = seatStr.slice(1);
+        return {
+          row,
+          seatNumber
+        };
+      }) || [{
+        row: 'N/A',
+        seatNumber: 'N/A'
+      }];
+
+      return {
+        bookingId: booking._id,
+        movie: booking.showtimeId?.movieId || defaultMovie,
+        theater: booking.showtimeId?.theaterId || defaultTheater,
+        showtime: {
+          startTime: booking.showtimeId?.startTime || defaultShowtime.startTime,
+          endTime: booking.showtimeId?.endTime || defaultShowtime.endTime
+        },
+        seats: parsedSeats,
+        totalAmount: booking.totalAmount || 0,
+        price: booking.showtimeId?.price || 0,
+        bookingDate: booking.createdAt || new Date(),
+        status: booking.status || 'UNKNOWN',
+        paymentStatus: booking.paymentStatus || 'UNKNOWN'
+      };
+    });
 
     res.status(200).json({
       success: true,
@@ -346,6 +522,7 @@ export const getBookingHistory = async (req: Request, res: Response): Promise<vo
       data: bookingHistory
     });
   } catch (err: any) {
+    console.error("Error in getBookingHistory:", err);
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
