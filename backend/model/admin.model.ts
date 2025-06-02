@@ -33,7 +33,7 @@ adminSchema.methods.generateAccessToken = function(): string {
       id: this._id,
       email: this.email,
       fullName: this.fullName,
-      isAdmin: true
+      role: 'admin'
     },
     secret,
     options

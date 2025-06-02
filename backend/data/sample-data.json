@@ -1,0 +1,142 @@
+{
+  "theaters": [
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9d0",
+      "name": "CinePax IMAX",
+      "location": "Gulberg, Lahore",
+      "capacity": 300,
+      "screens": 1,
+      "amenities": ["IMAX", "Dolby Atmos", "Premium Seating"],
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9d1",
+      "name": "CinePax Premium",
+      "location": "DHA, Lahore",
+      "capacity": 250,
+      "screens": 2,
+      "amenities": ["Dolby Atmos", "Premium Seating", "Food Court"],
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9d2",
+      "name": "CinePax Family",
+      "location": "Johar Town, Lahore",
+      "capacity": 200,
+      "screens": 3,
+      "amenities": ["3D", "Family Seating", "Play Area"],
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9d3",
+      "name": "CinePax Express",
+      "location": "Model Town, Lahore",
+      "capacity": 180,
+      "screens": 2,
+      "amenities": ["Standard Seating", "Snack Bar"],
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9d4",
+      "name": "CinePax Gold",
+      "location": "Bahria Town, Lahore",
+      "capacity": 220,
+      "screens": 2,
+      "amenities": ["Gold Class", "Premium Dining", "VIP Lounge"],
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    }
+  ],
+  "showtimes": [
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9e0",
+      "movieId": "573a1391f29313caabcd7616",
+      "theaterId": "65f1a1b2c3d4e5f6a7b8c9d0",
+      "startTime": "2024-03-15T10:00:00.000Z",
+      "endTime": "2024-03-15T11:12:00.000Z",
+      "price": 1200,
+      "availableSeats": 300,
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9e1",
+      "movieId": "573a1391f29313caabcd7472",
+      "theaterId": "65f1a1b2c3d4e5f6a7b8c9d1",
+      "startTime": "2024-03-15T13:00:00.000Z",
+      "endTime": "2024-03-15T14:12:00.000Z",
+      "price": 1000,
+      "availableSeats": 250,
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9e2",
+      "movieId": "573a1390f29313caabcd4eaf",
+      "theaterId": "65f1a1b2c3d4e5f6a7b8c9d2",
+      "startTime": "2024-03-15T15:00:00.000Z",
+      "endTime": "2024-03-15T16:57:00.000Z",
+      "price": 900,
+      "availableSeats": 200,
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9e3",
+      "movieId": "573a1390f29313caabcd446f",
+      "theaterId": "65f1a1b2c3d4e5f6a7b8c9d3",
+      "startTime": "2024-03-15T18:00:00.000Z",
+      "endTime": "2024-03-15T19:28:00.000Z",
+      "price": 800,
+      "availableSeats": 180,
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9e4",
+      "movieId": "573a1390f29313caabcd587d",
+      "theaterId": "65f1a1b2c3d4e5f6a7b8c9d4",
+      "startTime": "2024-03-15T20:00:00.000Z",
+      "endTime": "2024-03-15T20:14:00.000Z",
+      "price": 1500,
+      "availableSeats": 220,
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    }
+  ],
+  "seats": [
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9f0",
+      "showtimeId": "65f1a1b2c3d4e5f6a7b8c9e0",
+      "seatNumber": "A1",
+      "status": "available",
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    },
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9f1",
+      "showtimeId": "65f1a1b2c3d4e5f6a7b8c9e0",
+      "seatNumber": "A2",
+      "status": "booked",
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    }
+  ],
+  "bookings": [
+    {
+      "_id": "65f1a1b2c3d4e5f6a7b8c9f2",
+      "userId": "65f1a1b2c3d4e5f6a7b8c9f3",
+      "showtimeId": "65f1a1b2c3d4e5f6a7b8c9e0",
+      "seats": ["A2"],
+      "totalAmount": 1200,
+      "status": "confirmed",
+      "paymentStatus": "paid",
+      "createdAt": "2024-03-13T10:00:00.000Z",
+      "updatedAt": "2024-03-13T10:00:00.000Z"
+    }
+  ]
+} 

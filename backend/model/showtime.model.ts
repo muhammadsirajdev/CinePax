@@ -1,41 +1,47 @@
-import mongoose, { Document, Schema, Types } from 'mongoose';
-import { IMovie } from './movie.model';
-import { ITheater } from './theater.model';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IShowtime extends Document {
-  movie: Types.ObjectId | IMovie;
-  theater: Types.ObjectId | ITheater;
+  movieId: mongoose.Types.ObjectId;
+  theaterId: mongoose.Types.ObjectId;
   startTime: Date;
   endTime: Date;
   price: number;
+  availableSeats: number;
   createdAt: Date;
   updatedAt: Date;
 }
 
-const showtimeSchema = new Schema<IShowtime>({
-  movie: {
-    type: Schema.Types.ObjectId, 
-    ref: 'Movie',
-    required: true 
-  },
-  theater: { 
+const ShowtimeSchema = new Schema({
+  movieId: {
     type: Schema.Types.ObjectId,
-    ref: 'Theater', 
+    ref: 'Movie',
+    required: true
+  },
+  theaterId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Theater',
     required: true
   },
   startTime: {
-    type: Date, 
+    type: Date,
     required: true
   },
   endTime: {
-    type: Date, 
-    required: true 
+    type: Date,
+    required: true
   },
   price: {
     type: Number,
     required: true,
     min: 0
+  },
+  availableSeats: {
+    type: Number,
+    required: true,
+    min: 0
   }
-}, { timestamps: true });
+}, {
+  timestamps: true
+});
 
-export default mongoose.model<IShowtime>('Showtime', showtimeSchema); 
+export default mongoose.model<IShowtime>('Showtime', ShowtimeSchema); 
