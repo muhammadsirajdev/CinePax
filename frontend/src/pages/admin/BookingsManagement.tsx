@@ -63,7 +63,36 @@ const BookingsManagement = () => {
     try {
       setLoading(true)
       const response = await tickets.getAll()
-      setBookings(response.data)
+      // Map backend data to frontend structure
+      const mapped = response.data.map((b: any) => ({
+        _id: b._id,
+        userId: {
+          _id: b.customer._id,
+          fullName: b.customer.fullName,
+          email: b.customer.email,
+        },
+        showtimeId: {
+          _id: b.showtime._id,
+          startTime: b.showtime.startTime,
+          endTime: b.showtime.endTime,
+          movieId: {
+            _id: b.showtime.movie._id,
+            title: b.showtime.movie.title,
+          },
+          theaterId: {
+            _id: b.showtime.theater._id,
+            name: b.showtime.theater.name,
+            location: b.showtime.theater.location,
+          },
+        },
+        seats: [b.seat.seatNumber], // Convert to array
+        totalAmount: b.price,
+        status: b.status,
+        paymentStatus: b.paymentStatus || "paid", // fallback if not present
+        createdAt: b.createdAt,
+        updatedAt: b.updatedAt || b.createdAt,
+      }))
+      setBookings(mapped)
     } catch (error) {
       console.error("Error fetching bookings:", error)
       toast({
@@ -118,6 +147,7 @@ const BookingsManagement = () => {
   }
 
   const filteredBookings = bookings.filter((booking) => {
+    console.log(booking)
     const matchesSearch =
       booking.userId.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       booking.userId.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
