@@ -101,7 +101,7 @@ const Register = () => {
     setLoading(true)
 
     try {
-      // Mock API call - replace with actual API call
+      // Mock API call -  replace with actual API call
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Mock successful registration
